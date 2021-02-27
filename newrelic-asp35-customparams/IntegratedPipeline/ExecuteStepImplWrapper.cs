@@ -1,4 +1,5 @@
 ﻿using NewRelic.Agent.Api;
+using NewRelic.Agent.Extensions.Logging;
 using NewRelic.Agent.Extensions.Providers.Wrapper;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,35 @@ namespace Custom.Providers.Wrapper.Asp35
         private const string TypeName = "System.Web.HttpApplication";
         private const string MethodName = "ExecuteStepImpl";
         public bool IsTransactionRequired => true;
+        private string prefix = null;
+        private string[] headerNames = null;
+
+        public string readPrefix(IAgent agent)
+        {
+            string prefix = "";
+            IReadOnlyDictionary<string, string> appSettings = agent.Configuration.GetAppSettings();
+            
+            if (appSettings.TryGetValue("prefix", out prefix))
+            {
+                prefix = prefix ?? "";
+            }
+
+            return prefix;
+        }
+
+        public string[] readConfiguredHeaderNames(IAgent agent)
+        {
+            string reqHeaders = null;
+            string[] headerNamesList = new string[0];
+            IReadOnlyDictionary<string, string> appSettings = agent.Configuration.GetAppSettings();
+
+            if (appSettings.TryGetValue("requestHeaders", out reqHeaders))
+            {
+                headerNamesList = reqHeaders?.Split(',').Select(p => p.Trim()).ToArray<string>();
+                agent.Logger.Log(Level.Info, "Custom Asp35 Extension: These HTTP headers will be read and added to NewRelic transaction: " + "[" + String.Join(",", headerNamesList) + "]");
+            }
+            return headerNamesList;
+        }
 
         public CanWrapResponse CanWrap(InstrumentedMethodInfo instrumentedMethodInfo)
         {
@@ -29,6 +59,9 @@ namespace Custom.Providers.Wrapper.Asp35
         public AfterWrappedMethodDelegate BeforeWrappedMethod(InstrumentedMethodCall instrumentedMethodCall,
             IAgent agent, ITransaction transaction)
         {
+            prefix = prefix ?? readPrefix(agent);
+            headerNames = headerNames ?? readConfiguredHeaderNames(agent);
+
             if (!HttpRuntime.UsingIntegratedPipeline)
                 return Delegates.NoOp;
 
@@ -45,17 +78,20 @@ namespace Custom.Providers.Wrapper.Asp35
             var requestUrl = RequestUrlRetriever.TryGetRequestUrl(httpContext.Request, () => requestPath);
             if (requestUrl != null)
             {
-                transaction.AddCustomAttribute("ism.Url", requestUrl.AbsoluteUri);
+                transaction.AddCustomAttribute(prefix + "Url", requestUrl.AbsoluteUri);
             }
 
-            // We are using a variant of GetDelegateFor that doesn't pass down a return value to the local methods since we don't need the return.
-            return Delegates.GetDelegateFor(
-                onSuccess: OnSuccess
-            );
-
-            void OnSuccess()
+            foreach (var headerName in headerNames)
             {
+                string headerValue = httpContext.Request.Headers?.Get(headerName);
+                if (headerValue != null)
+                {
+                    transaction.AddCustomAttribute(prefix + headerName, headerValue);
+
+                }
             }
+
+            return Delegates.NoOp;
         }
     }
 
