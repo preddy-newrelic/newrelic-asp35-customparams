@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Custom.Providers.Wrapper.AspNetCore</RootNamespace>
+    <AssemblyName>Custom.Providers.Wrapper.AspNetCore</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Custom.Providers.Wrapper.AspNetCore.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Custom.Providers.Wrapper.AspNetCore.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="NewRelic.Agent.Extensions">
+      <HintPath>lib\NewRelic.Agent.Extensions.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

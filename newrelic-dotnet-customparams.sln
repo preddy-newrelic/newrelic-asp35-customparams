@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.31005.135
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "newrelic-asp35-customparams", "newrelic-asp35-customparams\newrelic-asp35-customparams.csproj", "{342ED80C-F85D-43BE-8C08-E7BF9C76417A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "newrelic-aspnetcore-customparams", "newrelic-aspnetcore-customparams\newrelic-aspnetcore-customparams.csproj", "{CDBA6C4F-ECC6-4DAE-948A-E6126AD1BA6E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{342ED80C-F85D-43BE-8C08-E7BF9C76417A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{342ED80C-F85D-43BE-8C08-E7BF9C76417A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{342ED80C-F85D-43BE-8C08-E7BF9C76417A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDBA6C4F-ECC6-4DAE-948A-E6126AD1BA6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDBA6C4F-ECC6-4DAE-948A-E6126AD1BA6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDBA6C4F-ECC6-4DAE-948A-E6126AD1BA6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDBA6C4F-ECC6-4DAE-948A-E6126AD1BA6E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
