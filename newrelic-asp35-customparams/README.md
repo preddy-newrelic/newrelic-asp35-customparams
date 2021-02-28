@@ -51,11 +51,11 @@ An Example snippet of newrelic.config with the above configuration looks like th
     <name>My Application</name>
   </application>
   <appSettings>
+	<add key="prefix" value="request." />
     <add key="requestProperties" value="Url"/>
     <add key="requestHeaders" value="Origin"/>
     <add key="requestParams" value="city, country"/>
 	<add key="requestCookies" value="SSOUSER, SSOSESSIONID"/>
-	<add key="prefix" value="request." />
   </appSettings>
   <log level="info" />
 ...

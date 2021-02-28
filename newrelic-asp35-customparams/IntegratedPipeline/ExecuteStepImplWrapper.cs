@@ -15,13 +15,14 @@ namespace Custom.Providers.Wrapper.Asp35
         private const string MethodName = "ExecuteStepImpl";
 
         private static string prefix = null;
+        private static bool? captureFullUrl = null;
         private static string[] headerNames = null;
         private static string[] paramNames = null;
         private static string[] cookieNames = null;
 
         public bool IsTransactionRequired => true;
 
-        public string readPrefix(IAgent agent)
+        private string readPrefix(IAgent agent)
         {
             string prefix = "";
             IReadOnlyDictionary<string, string> appSettings = agent.Configuration.GetAppSettings();
@@ -34,7 +35,7 @@ namespace Custom.Providers.Wrapper.Asp35
             return prefix;
         }
 
-        public string[] readConfiguredHeaderNames(IAgent agent)
+        private string[] readConfiguredHeaderNames(IAgent agent)
         {
             string reqHeaders = null;
             string[] headerNamesList = new string[0];
@@ -48,7 +49,7 @@ namespace Custom.Providers.Wrapper.Asp35
             return headerNamesList;
         }
 
-        public string[] readConfiguredParamNames(IAgent agent)
+        private string[] readConfiguredParamNames(IAgent agent)
         {
             string reqParams = null;
             string[] paramNamesList = new string[0];
@@ -62,7 +63,7 @@ namespace Custom.Providers.Wrapper.Asp35
             return paramNamesList;
         }
 
-        public string[] readConfiguredCookieNames(IAgent agent)
+        private string[] readConfiguredCookieNames(IAgent agent)
         {
             string reqCookies = null;
             string[] cookieNamesList = new string[0];
@@ -74,6 +75,26 @@ namespace Custom.Providers.Wrapper.Asp35
                 agent.Logger.Log(Level.Info, "Custom Asp35 Extension: These HTTP cookies will be read and added to NewRelic transaction: " + "[" + String.Join(",", cookieNamesList) + "]");
             }
             return cookieNamesList;
+        }
+        private void readConfiguredRequestProps(IAgent agent)
+        {
+            captureFullUrl = false;
+
+            string reqProperties = null;
+            string[] reqPropertyList = new string[0];
+            IReadOnlyDictionary<string, string> appSettings = agent.Configuration.GetAppSettings();
+            if (appSettings.TryGetValue("requestProperties", out reqProperties))
+            {
+                reqPropertyList = reqProperties?.Split(',').Select(p => p.Trim()).ToArray<string>();
+                foreach (var reqProp in reqPropertyList)
+                {
+                    if (reqProp.Equals("Url"))
+                    {
+                        captureFullUrl = true;
+                        agent.Logger.Log(Level.Info, "Custom Asp35 Extension: These full URL will be read and added to NewRelic transaction");
+                    }
+                }
+            }
         }
 
         public CanWrapResponse CanWrap(InstrumentedMethodInfo instrumentedMethodInfo)
@@ -91,11 +112,6 @@ namespace Custom.Providers.Wrapper.Asp35
         public AfterWrappedMethodDelegate BeforeWrappedMethod(InstrumentedMethodCall instrumentedMethodCall,
             IAgent agent, ITransaction transaction)
         {
-            prefix = prefix ?? readPrefix(agent);
-            headerNames = headerNames ?? readConfiguredHeaderNames(agent);
-            paramNames = paramNames ?? readConfiguredParamNames(agent);
-            cookieNames = cookieNames ?? readConfiguredCookieNames(agent);
-
             if (!HttpRuntime.UsingIntegratedPipeline)
                 return Delegates.NoOp;
 
@@ -112,12 +128,24 @@ namespace Custom.Providers.Wrapper.Asp35
                 return Delegates.NoOp;
             }
 
+            prefix = prefix ?? readPrefix(agent);
+            if (!captureFullUrl.HasValue)
+            {
+                readConfiguredRequestProps(agent);
+            }
+            headerNames = headerNames ?? readConfiguredHeaderNames(agent);
+            paramNames = paramNames ?? readConfiguredParamNames(agent);
+            cookieNames = cookieNames ?? readConfiguredCookieNames(agent);
+
             var requestPath = RequestPathRetriever.TryGetRequestPath(httpContext.Request);
 
-            var requestUrl = RequestUrlRetriever.TryGetRequestUrl(httpContext.Request, () => requestPath);
-            if (requestUrl != null)
+            if (captureFullUrl == true)
             {
-                transaction.AddCustomAttribute(prefix + "Url", requestUrl.AbsoluteUri);
+                var requestUrl = RequestUrlRetriever.TryGetRequestUrl(httpContext.Request, () => requestPath);
+                if (requestUrl != null)
+                {
+                    transaction.AddCustomAttribute(prefix + "Url", requestUrl.AbsoluteUri);
+                }
             }
 
             foreach (var headerName in headerNames)
@@ -152,6 +180,7 @@ namespace Custom.Providers.Wrapper.Asp35
 
             return Delegates.NoOp;
         }
+
     }
 
 }
