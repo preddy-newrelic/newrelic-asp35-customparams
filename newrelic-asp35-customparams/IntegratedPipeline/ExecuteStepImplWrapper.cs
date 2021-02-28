@@ -14,14 +14,14 @@ namespace Custom.Providers.Wrapper.Asp35
         private const string TypeName = "System.Web.HttpApplication";
         private const string MethodName = "ExecuteStepImpl";
         public bool IsTransactionRequired => true;
-        private string prefix = null;
-        private string[] headerNames = null;
+        private static string prefix = null;
+        private static string[] headerNames = null;
 
         public string readPrefix(IAgent agent)
         {
             string prefix = "";
             IReadOnlyDictionary<string, string> appSettings = agent.Configuration.GetAppSettings();
-            
+
             if (appSettings.TryGetValue("prefix", out prefix))
             {
                 prefix = prefix ?? "";
@@ -65,6 +65,8 @@ namespace Custom.Providers.Wrapper.Asp35
             if (!HttpRuntime.UsingIntegratedPipeline)
                 return Delegates.NoOp;
 
+            //TODO: check to sett if attribute already set and skip if already set
+
             var httpApplication = (HttpApplication)instrumentedMethodCall.MethodCall.InvocationTarget;
             if (httpApplication == null)
                 throw new NullReferenceException("httpApplication");
@@ -72,6 +74,11 @@ namespace Custom.Providers.Wrapper.Asp35
             var httpContext = httpApplication.Context;
             if (httpContext == null)
                 throw new NullReferenceException("httpContext");
+
+            if (httpContext.CurrentNotification != RequestNotification.MapRequestHandler)
+            {
+                return Delegates.NoOp;
+            }
 
             var requestPath = RequestPathRetriever.TryGetRequestPath(httpContext.Request);
 
