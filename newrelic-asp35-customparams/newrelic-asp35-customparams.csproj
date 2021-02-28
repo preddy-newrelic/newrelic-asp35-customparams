@@ -57,11 +57,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy /Y /R $(TargetPath) "C:\Program Files\New Relic\.NET Agent\netframework\Extensions"
-
-xcopy /Y /R  "C:\dev\dotnet\newrelic-asp35-customparams\newrelic-asp35-customparams\bin\Debug\Custom.Providers.Wrapper.Asp35.pdb" "C:\Program Files\New Relic\.NET Agent\netframework\Extensions"
-
-xcopy /Y  $(ProjectDir)Custom.Providers.Wrapper.Asp35.xml "C:\ProgramData\New Relic\.NET Agent\Extensions\netframework"
-</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>
