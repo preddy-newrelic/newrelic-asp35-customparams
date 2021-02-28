@@ -13,9 +13,13 @@ namespace Custom.Providers.Wrapper.Asp35
         private const string AssemblyName = "System.Web";
         private const string TypeName = "System.Web.HttpApplication";
         private const string MethodName = "ExecuteStepImpl";
-        public bool IsTransactionRequired => true;
+
         private static string prefix = null;
         private static string[] headerNames = null;
+        private static string[] paramNames = null;
+        private static string[] cookieNames = null;
+
+        public bool IsTransactionRequired => true;
 
         public string readPrefix(IAgent agent)
         {
@@ -44,6 +48,34 @@ namespace Custom.Providers.Wrapper.Asp35
             return headerNamesList;
         }
 
+        public string[] readConfiguredParamNames(IAgent agent)
+        {
+            string reqParams = null;
+            string[] paramNamesList = new string[0];
+            IReadOnlyDictionary<string, string> appSettings = agent.Configuration.GetAppSettings();
+
+            if (appSettings.TryGetValue("requestParams", out reqParams))
+            {
+                paramNamesList = reqParams?.Split(',').Select(p => p.Trim()).ToArray<string>();
+                agent.Logger.Log(Level.Info, "Custom Asp35 Extension: These HTTP params will be read and added to NewRelic transaction: " + "[" + String.Join(",", paramNamesList) + "]");
+            }
+            return paramNamesList;
+        }
+
+        public string[] readConfiguredCookieNames(IAgent agent)
+        {
+            string reqCookies = null;
+            string[] cookieNamesList = new string[0];
+            IReadOnlyDictionary<string, string> appSettings = agent.Configuration.GetAppSettings();
+
+            if (appSettings.TryGetValue("requestCookies", out reqCookies))
+            {
+                cookieNamesList = reqCookies?.Split(',').Select(p => p.Trim()).ToArray<string>();
+                agent.Logger.Log(Level.Info, "Custom Asp35 Extension: These HTTP cookies will be read and added to NewRelic transaction: " + "[" + String.Join(",", cookieNamesList) + "]");
+            }
+            return cookieNamesList;
+        }
+
         public CanWrapResponse CanWrap(InstrumentedMethodInfo instrumentedMethodInfo)
         {
             var method = instrumentedMethodInfo.Method;
@@ -61,11 +93,11 @@ namespace Custom.Providers.Wrapper.Asp35
         {
             prefix = prefix ?? readPrefix(agent);
             headerNames = headerNames ?? readConfiguredHeaderNames(agent);
+            paramNames = paramNames ?? readConfiguredParamNames(agent);
+            cookieNames = cookieNames ?? readConfiguredCookieNames(agent);
 
             if (!HttpRuntime.UsingIntegratedPipeline)
                 return Delegates.NoOp;
-
-            //TODO: check to sett if attribute already set and skip if already set
 
             var httpApplication = (HttpApplication)instrumentedMethodCall.MethodCall.InvocationTarget;
             if (httpApplication == null)
@@ -94,6 +126,26 @@ namespace Custom.Providers.Wrapper.Asp35
                 if (headerValue != null)
                 {
                     transaction.AddCustomAttribute(prefix + headerName, headerValue);
+
+                }
+            }
+
+            foreach (var paramName in paramNames)
+            {
+                string paramValue = httpContext.Request.Params?.Get(paramName);
+                if (paramValue != null)
+                {
+                    transaction.AddCustomAttribute(prefix + paramName, paramValue);
+
+                }
+            }
+
+            foreach (var cookieName in cookieNames)
+            {
+                HttpCookie cookieValue = httpContext.Request.Cookies?.Get(cookieName);
+                if (cookieValue != null)
+                {
+                    transaction.AddCustomAttribute(prefix + cookieName, cookieValue.Value);
 
                 }
             }
